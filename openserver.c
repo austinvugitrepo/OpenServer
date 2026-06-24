@@ -1,3 +1,8 @@
+/* Simple IPv4 TCP server that repeats clients' messages.  
+ * The server uses all local interfaces to listen on port 1234.
+ * The server currently accepts any connection.
+ */
+
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -11,15 +16,21 @@
 #include <string.h>
 #include <unistd.h>
 
-/* Simple IPv4 TCP server that repeats clients' messages.  
- * The server uses all local interfaces to listen on port 1234.
- * The server currently accepts any connection.
- */
+/* This function is for sa_handler, and essentially
+ * what it does is it waits for the child process to exit
+ * so it doesn't linger as a zombie.
+ */ 
 
 static void childhandle(int signum)
 {
 	waitpid(WAIT_ANY, NULL, WNOHANG);
 }
+
+/* The main server function follows the main logic flow
+ * of socket -> bind -> listen -> accept system calls 
+ * in this order respectively. Some other notable features
+ * of this function is to daemonize the program at the start
+ * and also fork itself for each connection of client/server. 
 
 int
 main(void)
