@@ -1,9 +1,11 @@
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
 #include <err.h>
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -13,6 +15,11 @@
  * The server currently accepts any connection.
  */
 
+static void childhandle(int signum)
+{
+	waitpid(WAIT_ANY, NULL, WNOHANG);
+}
+
 int
 main(void)
 {
@@ -21,6 +28,8 @@ main(void)
 	char mesg[2048] ; 
 	ssize_t r;
 	struct sockaddr_in address; 
+	struct sigaction siga;
+	pid_t pid;
 
 	if ((serv_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
 		err(1, "socket call failed.");
@@ -38,29 +47,46 @@ main(void)
 
 	printf("listening on port 1234...\n");
 
-	if ((cli_fd = accept(serv_fd, NULL, NULL)) == -1)
-		err(1, "accept call failed.");
+	siga.sa_handler = childhandle;
+	sigemptyset(&siga.sa_mask);
 
- 	for (;;) {	
-		if ((r = read(cli_fd, mesg, sizeof(mesg))) == -1)
-			err(1, "read call failed.");
+	siga.sa_flags = SA_RESTART;
+	if (sigaction(SIGCHLD, &siga, NULL) == -1)
+		err(1, "sigaction call failed.");
 
-		if (r == 0)
-			break;
+	for (;;) {
+		if ((cli_fd = accept(serv_fd, NULL, NULL)) == -1)
+			err(1, "accept call failed.");
 
-		if (write(cli_fd, mesg, r) == -1)
-			err(1, "write call failed.");
+		if ((pid = fork()) == -1)
+			err(1, "fork call failed.");
+		
+		if (pid == 0) {	
 
-		if (write(cli_fd, "\n\n" , 2) == -1)
-			err(1, "write call failed.");
+		if (close(serv_fd) == -1)
+			err(1, "close call failed.");
 
+		for (;;) {
+			if ((r = read(cli_fd, mesg, sizeof(mesg))) == -1)
+				err(1, "read call failed.");
+
+			if (r == 0)
+				_exit(0);
+
+			if (write(cli_fd, mesg, r) == -1)
+				err(1, "write call failed.");
+
+			if (write(cli_fd, "\n\n" , 2) == -1)
+				err(1, "write call failed.");
+		}
+
+
+		}
+
+		if (close(cli_fd) == -1)
+			err(1, "close call failed.");
 	}
 
-	if (close(cli_fd) == -1)
-		err(1, "close call failed.");
-
-	if (close(serv_fd) == -1)
-		err(1, "close call failed.");
 
 	return 0;
 
