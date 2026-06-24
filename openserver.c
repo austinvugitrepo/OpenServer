@@ -8,7 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 
-/* Simple IPv4 TCP server that greets clients until interruption. 
+/* Simple IPv4 TCP server that repeats clients' messages.  
  * The server uses all local interfaces to listen on port 1234.
  * The server currently accepts any connection.
  */
@@ -18,11 +18,13 @@ main(void)
 {
 
 	int serv_fd, cli_fd;
-	const char *mesg = "Hello person connecting!\n"; 
-	
+	char mesg[2048] ; 
+	ssize_t r;
 	struct sockaddr_in address; 
+
 	if ((serv_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
 		err(1, NULL);
+
 	memset(&address, 0, sizeof(address));
 	address.sin_family = AF_INET;
 	address.sin_port = htons(1234);
@@ -33,18 +35,32 @@ main(void)
 
 	if (listen(serv_fd, 1) == -1)
 		err(1, NULL);
+
 	printf("listening on port 1234...\n");
 
-	for (;;) { 
-		if ((cli_fd = accept(serv_fd, NULL, NULL)) == -1)
+	if ((cli_fd = accept(serv_fd, NULL, NULL)) == -1)
+		err(1, NULL);
+
+ 	for (;;) {	
+		if ((r = read(cli_fd, mesg, sizeof(mesg))) == -1)
 			err(1, NULL);
 
-		if (write(cli_fd, mesg, strlen(mesg)) == -1)
+		if (r == 0)
+			break;
+
+		if (write(cli_fd, mesg, r) == -1)
 			err(1, NULL);
-	
-		if (close(cli_fd) == -1)
+
+		if (write(cli_fd, "\n\n" , 2) == -1)
 			err(1, NULL);
+
 	}
+
+	if (close(cli_fd) == -1)
+		err(1, NULL);
+
+	if (close(serv_fd) == -1)
+		err(1, NULL);
 
 	return 0;
 
