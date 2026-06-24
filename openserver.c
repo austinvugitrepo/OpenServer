@@ -23,7 +23,7 @@ main(void)
 	struct sockaddr_in address; 
 
 	if ((serv_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
-		err(1, NULL);
+		err(1, "socket call failed.");
 
 	memset(&address, 0, sizeof(address));
 	address.sin_family = AF_INET;
@@ -31,36 +31,36 @@ main(void)
 	address.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	if (bind(serv_fd, (struct sockaddr *)&address, sizeof(address)) == -1)
-		err(1, NULL);
+		err(1, "bind call failed.");
 
 	if (listen(serv_fd, 1) == -1)
-		err(1, NULL);
+		err(1, "listen call failed.");
 
 	printf("listening on port 1234...\n");
 
 	if ((cli_fd = accept(serv_fd, NULL, NULL)) == -1)
-		err(1, NULL);
+		err(1, "accept call failed.");
 
  	for (;;) {	
 		if ((r = read(cli_fd, mesg, sizeof(mesg))) == -1)
-			err(1, NULL);
+			err(1, "read call failed.");
 
 		if (r == 0)
 			break;
 
 		if (write(cli_fd, mesg, r) == -1)
-			err(1, NULL);
+			err(1, "write call failed.");
 
 		if (write(cli_fd, "\n\n" , 2) == -1)
-			err(1, NULL);
+			err(1, "write call failed.");
 
 	}
 
 	if (close(cli_fd) == -1)
-		err(1, NULL);
+		err(1, "close call failed.");
 
 	if (close(serv_fd) == -1)
-		err(1, NULL);
+		err(1, "close call failed.");
 
 	return 0;
 
