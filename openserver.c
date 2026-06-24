@@ -23,7 +23,8 @@
 
 static void childhandle(int signum)
 {
-	waitpid(WAIT_ANY, NULL, WNOHANG);
+	while (waitpid(WAIT_ANY, NULL, WNOHANG) > 0)
+		; /* for only running condition, no body */
 }
 
 /* The main server function follows the main logic flow
@@ -61,8 +62,8 @@ main(void)
 
 	siga.sa_handler = childhandle;
 	sigemptyset(&siga.sa_mask);
-
 	siga.sa_flags = SA_RESTART;
+
 	if (sigaction(SIGCHLD, &siga, NULL) == -1)
 		err(1, "sigaction call failed.");
 
