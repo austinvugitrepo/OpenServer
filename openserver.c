@@ -31,7 +31,7 @@ static void childhandle(int signum)
  * in this order respectively. Some other notable features
  * of this function is to daemonize the program at the start
  * and also fork itself for each connection of client/server. 
-
+ */
 int
 main(void)
 {
