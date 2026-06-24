@@ -7,6 +7,7 @@
 #include <err.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -23,7 +24,7 @@ static void childhandle(int signum)
 int
 main(void)
 {
-
+	daemon(0, 0);
 	int serv_fd, cli_fd;
 	char mesg[2048] ; 
 	ssize_t r;
