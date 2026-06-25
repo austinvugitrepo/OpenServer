@@ -10,21 +10,67 @@
 #include <netinet/in.h>
 
 #include <err.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 /* This function is for sa_handler, and essentially
  * what it does is it waits for the child process to exit
  * so it doesn't linger as a zombie.
- */ 
-
-static void childhandle(int signum)
+ */
+ 
+static void
+childhandle(int signum)
 {
 	while (waitpid(WAIT_ANY, NULL, WNOHANG) > 0)
 		; /* for only running condition, no body */
+}
+
+/* This function is for turning the server into a daemon.
+ * daemonize is a double fork implementation of daemonization
+ * that starts with a fork leaving a child, the child becomes
+ * a session leader then fork again to have a granchild be
+ * the only survivor. This is a replacement for the daemon()
+ * OpenBSD libc function. 
+ */
+
+static void
+daemonize(void)
+{
+	pid_t pid;	
+	int fd;	
+
+	if ((pid = fork()) == -1)
+		err(1, "fork call failed.");
+
+	else if (pid > 0 )
+		_exit(0);
+	
+	if (setsid() == -1)
+		err(1, "setsid call failed.");
+
+	if ((pid = fork()) == -1)
+		err(1, "fork call failed.");
+
+	else if (pid > 0 )
+		_exit(0);
+
+	if (chdir("/") == -1)
+		err(1, "chdir call failed.");
+
+	if ((fd = open("/dev/null", O_RDWR)) == -1) 
+		err(1, "open call failed.");
+	
+	(void)dup2(fd, 0);
+	(void)dup2(fd, 1);
+	(void)dup2(fd, 2);
+	
+	if (fd > 2)
+		if (close(fd) == -1)
+			err(1, "close call failed.");
+
 }
 
 /* The main server function follows the main logic flow
@@ -33,10 +79,11 @@ static void childhandle(int signum)
  * of this function is to daemonize the program at the start
  * and also fork itself for each connection of client/server. 
  */
+
 int
 main(void)
 {
-	daemon(0, 0);
+	daemonize();
 	int serv_fd, cli_fd;
 	char mesg[2048] ; 
 	ssize_t r;
